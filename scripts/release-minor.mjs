@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import semver from "semver";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoDir = path.resolve(scriptDir, "..");
@@ -28,19 +29,6 @@ function readPackageVersion() {
   return pkg.version;
 }
 
-function bumpMinor(version) {
-  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
-
-  if (!match) {
-    throw new Error(`Unsupported package version: ${version}`);
-  }
-
-  const major = Number(match[1]);
-  const minor = Number(match[2]) + 1;
-
-  return `${major}.${minor}.0`;
-}
-
 function tagExists(tag) {
   try {
     capture("git", ["rev-parse", "--verify", `refs/tags/${tag}`]);
@@ -60,7 +48,12 @@ function remoteTagExists(tag) {
 }
 
 const currentVersion = readPackageVersion();
-const nextVersion = bumpMinor(currentVersion);
+const nextVersion = semver.inc(currentVersion, "minor");
+
+if (!nextVersion) {
+  throw new Error(`Unsupported package version: ${currentVersion}`);
+}
+
 const nextTag = `v${nextVersion}`;
 
 if (tagExists(nextTag) || remoteTagExists(nextTag)) {
@@ -84,7 +77,7 @@ if (status) {
   throw new Error("release:minor requires a clean working tree.");
 }
 
-run("npm", ["version", "minor", "--no-git-tag-version"]);
+run("npm", ["version", nextVersion, "--no-git-tag-version"]);
 
 const updatedVersion = readPackageVersion();
 if (updatedVersion !== nextVersion) {
