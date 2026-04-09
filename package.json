@@ -15,6 +15,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json && mkdir -p dist/scenes && cp src/scenes/*.json dist/scenes/",
+    "release:minor": "node ./scripts/release-minor.mjs",
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
