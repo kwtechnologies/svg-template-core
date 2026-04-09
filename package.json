@@ -1,9 +1,15 @@
 {
   "name": "@kwtech/kube-svg-template-core",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.1.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kwtechnologies/svg-template-core.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "files": [
     "dist"
   ],
