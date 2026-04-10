@@ -30,7 +30,7 @@ export const sampleShippingSlipData: ShippingSlipTemplateData = {
     fullAddress:
       "Flat B, 18/F, Harbour Heights, 88 King's Road, North Point, Hong Kong Island, Hong Kong",
     remarks: "Leave by concierge if no answer at the door.",
-    courierPayment: "SF Express // Sender Pay",
+    courierPayment: "SF Express // Pay by Receiver",
   },
 };
 
