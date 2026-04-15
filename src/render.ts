@@ -8,7 +8,7 @@ import type {
 import { DEFAULT_TEMPLATE_FONT_FAMILY } from "./types";
 
 const fallbackMeasure = (text: string, fontSize: number) =>
-  text.length * fontSize * 0.58;
+  Array.from(text).length * fontSize * 0.58;
 
 const createMeasurementContext = () => {
   if (typeof document === "undefined") {
@@ -116,20 +116,69 @@ export const getTextValue = (
   return element.uppercase ? value.toUpperCase() : value;
 };
 
-export const wrapTextToWidth = (
+const splitTokenToWidth = (
+  token: string,
+  maxWidth: number,
+  fontSize: number,
+  fontFamily: string,
+  fontWeight: number,
+  measureText: NonNullable<SceneRenderHooks["measureText"]>,
+) => {
+  const chunks: string[] = [];
+  let current = "";
+
+  for (const character of Array.from(token)) {
+    const candidate = `${current}${character}`;
+    if (
+      current &&
+      measureText({
+        text: candidate,
+        fontSize,
+        fontFamily,
+        fontWeight,
+      }) > maxWidth
+    ) {
+      chunks.push(current);
+      current = character;
+      continue;
+    }
+
+    if (
+      !current &&
+      measureText({
+        text: candidate,
+        fontSize,
+        fontFamily,
+        fontWeight,
+      }) > maxWidth
+    ) {
+      chunks.push(character);
+      continue;
+    }
+
+    current = candidate;
+  }
+
+  if (current) {
+    chunks.push(current);
+  }
+
+  return chunks;
+};
+
+const wrapSegmentToWidth = (
   text: string,
   maxWidth: number,
   fontSize: number,
   fontFamily: string,
   fontWeight: number,
-  measureText: SceneRenderHooks["measureText"],
+  measureText: NonNullable<SceneRenderHooks["measureText"]>,
 ) => {
   const source = text.trim();
   if (!source) {
     return [""];
   }
 
-  const measure = measureText ?? defaultMeasureText;
   const words = source.split(/\s+/);
   const lines: string[] = [];
   let current = "";
@@ -138,7 +187,7 @@ export const wrapTextToWidth = (
     const candidate = current ? `${current} ${word}` : word;
     if (
       current &&
-      measure({
+      measureText({
         text: candidate,
         fontSize,
         fontFamily,
@@ -146,11 +195,36 @@ export const wrapTextToWidth = (
       }) > maxWidth
     ) {
       lines.push(current);
-      current = word;
-    } else {
-      current = candidate;
+      current = "";
     }
 
+    if (!current) {
+      if (
+        measureText({
+          text: word,
+          fontSize,
+          fontFamily,
+          fontWeight,
+        }) <= maxWidth
+      ) {
+        current = word;
+        continue;
+      }
+
+      const chunks = splitTokenToWidth(
+        word,
+        maxWidth,
+        fontSize,
+        fontFamily,
+        fontWeight,
+        measureText,
+      );
+      lines.push(...chunks.slice(0, -1));
+      current = chunks[chunks.length - 1] ?? "";
+      continue;
+    }
+
+    current = candidate;
   }
 
   if (current) {
@@ -158,6 +232,35 @@ export const wrapTextToWidth = (
   }
 
   return lines;
+};
+
+export const wrapTextToWidth = (
+  text: string,
+  maxWidth: number,
+  fontSize: number,
+  fontFamily: string,
+  fontWeight: number,
+  measureText: SceneRenderHooks["measureText"],
+) => {
+  const source = text.replace(/\r\n?/g, "\n").trim();
+  if (!source) {
+    return [""];
+  }
+
+  const measure = measureText ?? defaultMeasureText;
+
+  return source
+    .split("\n")
+    .flatMap((segment) =>
+      wrapSegmentToWidth(
+        segment,
+        maxWidth,
+        fontSize,
+        fontFamily,
+        fontWeight,
+        measure,
+      ),
+    );
 };
 
 export const getTextLines = (

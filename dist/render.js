@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sceneToSvgMarkup = exports.getBarcodeValue = exports.getBarcodeGraphicHeight = exports.createBarcodeBars = exports.getElementBounds = exports.getTextLayout = exports.getTextStartY = exports.getTextAnchorX = exports.getTextBlockHeight = exports.getTextLines = exports.wrapTextToWidth = exports.getTextValue = exports.getElementLabel = exports.resolveBindingValue = exports.escapeXml = exports.BARCODE_VALUE_HEIGHT = void 0;
 const types_1 = require("./types");
-const fallbackMeasure = (text, fontSize) => text.length * fontSize * 0.58;
+const fallbackMeasure = (text, fontSize) => Array.from(text).length * fontSize * 0.58;
 const createMeasurementContext = () => {
     if (typeof document === "undefined") {
         return null;
@@ -66,35 +66,90 @@ const getTextValue = (element, data) => {
     return element.uppercase ? value.toUpperCase() : value;
 };
 exports.getTextValue = getTextValue;
-const wrapTextToWidth = (text, maxWidth, fontSize, fontFamily, fontWeight, measureText) => {
+const splitTokenToWidth = (token, maxWidth, fontSize, fontFamily, fontWeight, measureText) => {
+    const chunks = [];
+    let current = "";
+    for (const character of Array.from(token)) {
+        const candidate = `${current}${character}`;
+        if (current &&
+            measureText({
+                text: candidate,
+                fontSize,
+                fontFamily,
+                fontWeight,
+            }) > maxWidth) {
+            chunks.push(current);
+            current = character;
+            continue;
+        }
+        if (!current &&
+            measureText({
+                text: candidate,
+                fontSize,
+                fontFamily,
+                fontWeight,
+            }) > maxWidth) {
+            chunks.push(character);
+            continue;
+        }
+        current = candidate;
+    }
+    if (current) {
+        chunks.push(current);
+    }
+    return chunks;
+};
+const wrapSegmentToWidth = (text, maxWidth, fontSize, fontFamily, fontWeight, measureText) => {
     const source = text.trim();
     if (!source) {
         return [""];
     }
-    const measure = measureText ?? defaultMeasureText;
     const words = source.split(/\s+/);
     const lines = [];
     let current = "";
     for (const word of words) {
         const candidate = current ? `${current} ${word}` : word;
         if (current &&
-            measure({
+            measureText({
                 text: candidate,
                 fontSize,
                 fontFamily,
                 fontWeight,
             }) > maxWidth) {
             lines.push(current);
-            current = word;
+            current = "";
         }
-        else {
-            current = candidate;
+        if (!current) {
+            if (measureText({
+                text: word,
+                fontSize,
+                fontFamily,
+                fontWeight,
+            }) <= maxWidth) {
+                current = word;
+                continue;
+            }
+            const chunks = splitTokenToWidth(word, maxWidth, fontSize, fontFamily, fontWeight, measureText);
+            lines.push(...chunks.slice(0, -1));
+            current = chunks[chunks.length - 1] ?? "";
+            continue;
         }
+        current = candidate;
     }
     if (current) {
         lines.push(current);
     }
     return lines;
+};
+const wrapTextToWidth = (text, maxWidth, fontSize, fontFamily, fontWeight, measureText) => {
+    const source = text.replace(/\r\n?/g, "\n").trim();
+    if (!source) {
+        return [""];
+    }
+    const measure = measureText ?? defaultMeasureText;
+    return source
+        .split("\n")
+        .flatMap((segment) => wrapSegmentToWidth(segment, maxWidth, fontSize, fontFamily, fontWeight, measure));
 };
 exports.wrapTextToWidth = wrapTextToWidth;
 const getTextLines = (element, data, hooks = {}) => (0, exports.wrapTextToWidth)((0, exports.getTextValue)(element, data), element.width, element.fontSize, element.fontFamily, element.fontWeight, hooks.measureText);
