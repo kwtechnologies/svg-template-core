@@ -101,7 +101,7 @@
       "binding": "item.description",
       "fill": "#111111",
       "fontSize": 29,
-      "fontWeight": 500,
+      "fontWeight": 400,
       "fontFamily": "\"Noto Sans CJK TC\", \"Noto Sans TC\", sans-serif",
       "lineHeight": 1.25,
       "anchor": "start",
