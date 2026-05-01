@@ -1,4 +1,6 @@
 import type {
+  BarcodeRenderMode,
+  HorizontalAlign,
   SceneBarcodeElement,
   SceneElement,
   SceneTextElement,
@@ -39,6 +41,7 @@ export interface SceneRenderHooks {
 }
 
 export const BARCODE_VALUE_HEIGHT = 14;
+export const DEFAULT_BARCODE_MODULE_WIDTH = 2;
 
 export const escapeXml = (value: string) =>
   value
@@ -347,10 +350,10 @@ export const getElementBounds = (element: SceneElement) => {
   };
 };
 
-export const createBarcodeBars = (value: string, width: number) => {
-  const bars: Array<{ x: number; width: number }> = [];
+const createBarcodeUnits = (value: string): number[] => {
   const encoded = [...value].map((character) => character.charCodeAt(0));
-  const units = encoded.flatMap((code, index) => {
+
+  return encoded.flatMap((code, index) => {
     const seed = code + index * 13;
     return [
       1 + (seed % 3),
@@ -360,6 +363,11 @@ export const createBarcodeBars = (value: string, width: number) => {
       2 + ((seed >> 4) % 5),
     ];
   });
+};
+
+export const createBarcodeBars = (value: string, width: number) => {
+  const bars: Array<{ x: number; width: number }> = [];
+  const units = createBarcodeUnits(value);
 
   const totalUnits = units.reduce((sum, unit) => sum + unit, 0) || 1;
   const scale = width / totalUnits;
@@ -376,10 +384,92 @@ export const createBarcodeBars = (value: string, width: number) => {
   return bars;
 };
 
+export const createIntrinsicBarcodeBars = (
+  value: string,
+  moduleWidth = DEFAULT_BARCODE_MODULE_WIDTH,
+) => {
+  const bars: Array<{ x: number; width: number }> = [];
+  const units = createBarcodeUnits(value);
+  let cursor = 0;
+
+  units.forEach((unit, index) => {
+    const barWidth = Math.max(1, unit * moduleWidth);
+    if (index % 2 === 0) {
+      bars.push({ x: cursor, width: barWidth });
+    }
+    cursor += barWidth;
+  });
+
+  return {
+    bars,
+    width: cursor,
+  };
+};
+
 export const getBarcodeGraphicHeight = (element: SceneBarcodeElement) =>
   element.showValue
     ? Math.max(element.height - BARCODE_VALUE_HEIGHT, 0)
     : element.height;
+
+export const getBarcodeHorizontalAlign = (
+  element: Pick<SceneBarcodeElement, "horizontalAlign">,
+): HorizontalAlign => element.horizontalAlign ?? "left";
+
+export const getBarcodeRenderMode = (
+  element: Pick<SceneBarcodeElement, "renderMode">,
+): BarcodeRenderMode => element.renderMode ?? "stretch";
+
+export const getBarcodeHorizontalOffset = (
+  containerWidth: number,
+  contentWidth: number,
+  horizontalAlign: HorizontalAlign,
+) => {
+  if (horizontalAlign === "center") {
+    return (containerWidth - contentWidth) / 2;
+  }
+
+  if (horizontalAlign === "right") {
+    return containerWidth - contentWidth;
+  }
+
+  return 0;
+};
+
+export const getBarcodeLayoutMetrics = (
+  element: SceneBarcodeElement,
+  value: string,
+) => {
+  const graphicHeight = getBarcodeGraphicHeight(element);
+  const renderMode = getBarcodeRenderMode(element);
+
+  if (renderMode === "stretch") {
+    return {
+      bars: createBarcodeBars(value, element.width),
+      captionX: element.width / 2,
+      contentWidth: element.width,
+      contentX: 0,
+      graphicHeight,
+    };
+  }
+
+  const intrinsicLayout = createIntrinsicBarcodeBars(value);
+  const contentX = getBarcodeHorizontalOffset(
+    element.width,
+    intrinsicLayout.width,
+    getBarcodeHorizontalAlign(element),
+  );
+
+  return {
+    bars: intrinsicLayout.bars.map((bar) => ({
+      ...bar,
+      x: bar.x + contentX,
+    })),
+    captionX: contentX + intrinsicLayout.width / 2,
+    contentWidth: intrinsicLayout.width,
+    contentX,
+    graphicHeight,
+  };
+};
 
 export const getBarcodeValue = (
   element: SceneBarcodeElement,
@@ -405,14 +495,14 @@ const renderTextElement = async (
 };
 
 const defaultRenderBarcode = ({ element, value }: BarcodeRenderArgs) => {
-  const graphicHeight = getBarcodeGraphicHeight(element);
-  const bars = createBarcodeBars(value, element.width)
+  const layout = getBarcodeLayoutMetrics(element, value);
+  const bars = layout.bars
     .map((bar) => {
-      return `<rect x="${bar.x}" y="0" width="${bar.width}" height="${graphicHeight}" fill="${element.stroke}" />`;
+      return `<rect x="${bar.x}" y="0" width="${bar.width}" height="${layout.graphicHeight}" fill="${element.stroke}" />`;
     })
     .join("");
   const caption = element.showValue
-    ? `<text x="${element.width / 2}" y="${element.height}" text-anchor="middle" font-size="12" font-family="${escapeXml(
+    ? `<text x="${layout.captionX}" y="${element.height}" text-anchor="middle" font-size="12" font-family="${escapeXml(
         DEFAULT_TEMPLATE_FONT_FAMILY,
       )}" fill="${element.stroke}">${escapeXml(value)}</text>`
     : "";

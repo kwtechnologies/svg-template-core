@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_TEMPLATE_FONT_FAMILY,
+  getBarcodeHorizontalOffset,
+  getBarcodeLayoutMetrics,
   getPlaceholderDefinitionsForSchema,
   getSampleDataForSchema,
   itemLabelBasicDocument,
@@ -9,6 +11,7 @@ import {
   sceneToSvgMarkup,
   shippingSlipBigDocument,
   shippingSlipSmallDocument,
+  type SceneBarcodeElement,
   wrapTextToWidth,
 } from "./index";
 
@@ -29,7 +32,7 @@ describe("svg-template-core", () => {
 
     expect(bigMarkup).toContain("OUT-240409-018");
     expect(bigMarkup).toContain("Chan Ka Yan");
-    expect(smallMarkup).toContain("SF Express // Sender Pay");
+    expect(smallMarkup).toContain("SF Express // Pay by Receiver");
     expect(smallMarkup).toContain("<svg");
   });
 
@@ -41,7 +44,7 @@ describe("svg-template-core", () => {
     );
 
     expect(markup).toContain("SKU-000241");
-    expect(markup).toContain("ITEM Name:");
+    expect(markup).toContain("Item Name:");
     expect(markup).toContain("Repair-focused daily serum");
     expect(markup).toContain("Description:");
   });
@@ -130,5 +133,55 @@ describe("svg-template-core", () => {
     expect(markup).toContain(
       '<tspan x="0" dy="0">第一行</tspan><tspan x="0" dy="14.399999999999999">Second line</tspan>',
     );
+  });
+
+  it("supports barcode alignment offsets and intrinsic layout growth", () => {
+    const barcodeElement: SceneBarcodeElement = {
+      id: "barcode",
+      name: "Barcode",
+      type: "barcode",
+      x: 0,
+      y: 0,
+      width: 120,
+      height: 48,
+      value: "",
+      binding: "",
+      stroke: "#000000",
+      showValue: false,
+      horizontalAlign: "right",
+      renderMode: "intrinsic",
+    };
+
+    expect(getBarcodeHorizontalOffset(420, 300, "left")).toBe(0);
+    expect(getBarcodeHorizontalOffset(420, 300, "center")).toBe(60);
+    expect(getBarcodeHorizontalOffset(420, 300, "right")).toBe(120);
+
+    const legacyLayout = getBarcodeLayoutMetrics(
+      { ...barcodeElement, horizontalAlign: undefined, renderMode: undefined },
+      "SKU-001",
+    );
+    expect(legacyLayout.contentX).toBe(0);
+    expect(legacyLayout.contentWidth).toBe(120);
+
+    const shortLayout = getBarcodeLayoutMetrics(barcodeElement, "SKU-001");
+    const longLayout = getBarcodeLayoutMetrics(
+      barcodeElement,
+      "SKU-0000000000000000000001",
+    );
+
+    expect(shortLayout.contentX + shortLayout.contentWidth).toBe(120);
+    expect(longLayout.contentX + longLayout.contentWidth).toBe(120);
+    expect(longLayout.contentX).toBeLessThan(shortLayout.contentX);
+  });
+
+  it("marks the item label barcode as intrinsic and right aligned", () => {
+    const barcodeElement = itemLabelBasicDocument.scene.elements.find(
+      (element) => element.type === "barcode",
+    );
+
+    expect(barcodeElement).toMatchObject({
+      horizontalAlign: "right",
+      renderMode: "intrinsic",
+    });
   });
 });

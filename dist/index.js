@@ -28,14 +28,16 @@ var item_label_basic_default = {
 			"id": "barcode",
 			"name": "Barcode",
 			"type": "barcode",
-			"x": 398,
+			"x": 350,
 			"y": 22,
-			"width": 402,
+			"width": 420,
 			"height": 104,
 			"value": "",
 			"binding": "item.sku",
 			"stroke": "#111111",
-			"showValue": false
+			"showValue": false,
+			"horizontalAlign": "right",
+			"renderMode": "intrinsic"
 		},
 		{
 			"id": "item-name-label",
@@ -965,6 +967,7 @@ const createMeasurementContext = () => {
 };
 const measurementContext = createMeasurementContext();
 const BARCODE_VALUE_HEIGHT = 14;
+const DEFAULT_BARCODE_MODULE_WIDTH = 2;
 const escapeXml = (value) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 const defaultMeasureText = ({ text, fontSize, fontFamily, fontWeight }) => {
 	if (!measurementContext) return fallbackMeasure(text, fontSize);
@@ -1096,9 +1099,8 @@ const getElementBounds = (element) => {
 		height: "height" in element ? element.height : 1
 	};
 };
-const createBarcodeBars = (value, width) => {
-	const bars = [];
-	const units = [...value].map((character) => character.charCodeAt(0)).flatMap((code, index) => {
+const createBarcodeUnits = (value) => {
+	return [...value].map((character) => character.charCodeAt(0)).flatMap((code, index) => {
 		const seed = code + index * 13;
 		return [
 			1 + seed % 3,
@@ -1108,6 +1110,10 @@ const createBarcodeBars = (value, width) => {
 			2 + (seed >> 4) % 5
 		];
 	});
+};
+const createBarcodeBars = (value, width) => {
+	const bars = [];
+	const units = createBarcodeUnits(value);
 	const scale = width / (units.reduce((sum, unit) => sum + unit, 0) || 1);
 	let cursor = 0;
 	units.forEach((unit, index) => {
@@ -1120,7 +1126,53 @@ const createBarcodeBars = (value, width) => {
 	});
 	return bars;
 };
+const createIntrinsicBarcodeBars = (value, moduleWidth = 2) => {
+	const bars = [];
+	const units = createBarcodeUnits(value);
+	let cursor = 0;
+	units.forEach((unit, index) => {
+		const barWidth = Math.max(1, unit * moduleWidth);
+		if (index % 2 === 0) bars.push({
+			x: cursor,
+			width: barWidth
+		});
+		cursor += barWidth;
+	});
+	return {
+		bars,
+		width: cursor
+	};
+};
 const getBarcodeGraphicHeight = (element) => element.showValue ? Math.max(element.height - 14, 0) : element.height;
+const getBarcodeHorizontalAlign = (element) => element.horizontalAlign ?? "left";
+const getBarcodeRenderMode = (element) => element.renderMode ?? "stretch";
+const getBarcodeHorizontalOffset = (containerWidth, contentWidth, horizontalAlign) => {
+	if (horizontalAlign === "center") return (containerWidth - contentWidth) / 2;
+	if (horizontalAlign === "right") return containerWidth - contentWidth;
+	return 0;
+};
+const getBarcodeLayoutMetrics = (element, value) => {
+	const graphicHeight = getBarcodeGraphicHeight(element);
+	if (getBarcodeRenderMode(element) === "stretch") return {
+		bars: createBarcodeBars(value, element.width),
+		captionX: element.width / 2,
+		contentWidth: element.width,
+		contentX: 0,
+		graphicHeight
+	};
+	const intrinsicLayout = createIntrinsicBarcodeBars(value);
+	const contentX = getBarcodeHorizontalOffset(element.width, intrinsicLayout.width, getBarcodeHorizontalAlign(element));
+	return {
+		bars: intrinsicLayout.bars.map((bar) => ({
+			...bar,
+			x: bar.x + contentX
+		})),
+		captionX: contentX + intrinsicLayout.width / 2,
+		contentWidth: intrinsicLayout.width,
+		contentX,
+		graphicHeight
+	};
+};
 const getBarcodeValue = (element, data) => element.binding ? resolveBindingValue(element.binding, data) : element.value;
 const renderTextElement = async (element, data, hooks) => {
 	const { lines, anchorX, startY } = getTextLayout(element, data, hooks);
@@ -1130,11 +1182,11 @@ const renderTextElement = async (element, data, hooks) => {
 	return `<g><rect x="${element.x}" y="${element.y}" width="${element.width}" height="${element.height}" fill="#ffffff" fill-opacity="0.001" /><text x="${anchorX}" y="${startY}" font-family="${escapeXml(element.fontFamily)}" font-size="${element.fontSize}" font-weight="${element.fontWeight}" fill="${element.fill}" text-anchor="${element.anchor}">${tspans}</text></g>`;
 };
 const defaultRenderBarcode = ({ element, value }) => {
-	const graphicHeight = getBarcodeGraphicHeight(element);
-	const bars = createBarcodeBars(value, element.width).map((bar) => {
-		return `<rect x="${bar.x}" y="0" width="${bar.width}" height="${graphicHeight}" fill="${element.stroke}" />`;
+	const layout = getBarcodeLayoutMetrics(element, value);
+	const bars = layout.bars.map((bar) => {
+		return `<rect x="${bar.x}" y="0" width="${bar.width}" height="${layout.graphicHeight}" fill="${element.stroke}" />`;
 	}).join("");
-	const caption = element.showValue ? `<text x="${element.width / 2}" y="${element.height}" text-anchor="middle" font-size="12" font-family="${escapeXml(DEFAULT_TEMPLATE_FONT_FAMILY)}" fill="${element.stroke}">${escapeXml(value)}</text>` : "";
+	const caption = element.showValue ? `<text x="${layout.captionX}" y="${element.height}" text-anchor="middle" font-size="12" font-family="${escapeXml(DEFAULT_TEMPLATE_FONT_FAMILY)}" fill="${element.stroke}">${escapeXml(value)}</text>` : "";
 	return `<g transform="translate(${element.x} ${element.y})"><rect x="0" y="0" width="${element.width}" height="${element.height}" fill="#ffffff" fill-opacity="0.001" />${bars}${caption}</g>`;
 };
 const renderElement = async (element, data, hooks) => {
@@ -1203,6 +1255,7 @@ const sampleDataBySchema = {
 const getSampleDataForSchema = (schema) => sampleDataBySchema[schema];
 //#endregion
 exports.BARCODE_VALUE_HEIGHT = BARCODE_VALUE_HEIGHT;
+exports.DEFAULT_BARCODE_MODULE_WIDTH = DEFAULT_BARCODE_MODULE_WIDTH;
 exports.DEFAULT_SHIPPING_SLIP_DOCUMENT_ID = DEFAULT_SHIPPING_SLIP_DOCUMENT_ID;
 exports.DEFAULT_TEMPLATE_FONT_FAMILY = DEFAULT_TEMPLATE_FONT_FAMILY;
 exports.ITEM_LABEL_BASIC_DOCUMENT_ID = ITEM_LABEL_BASIC_DOCUMENT_ID;
@@ -1213,8 +1266,13 @@ exports.TEMPLATE_DOCUMENTS = TEMPLATE_DOCUMENTS;
 exports.TEMPLATE_SCENE_SOURCE_PATHS = TEMPLATE_SCENE_SOURCE_PATHS;
 exports.cloneTemplateScene = cloneTemplateScene;
 exports.createBarcodeBars = createBarcodeBars;
+exports.createIntrinsicBarcodeBars = createIntrinsicBarcodeBars;
 exports.escapeXml = escapeXml;
 exports.getBarcodeGraphicHeight = getBarcodeGraphicHeight;
+exports.getBarcodeHorizontalAlign = getBarcodeHorizontalAlign;
+exports.getBarcodeHorizontalOffset = getBarcodeHorizontalOffset;
+exports.getBarcodeLayoutMetrics = getBarcodeLayoutMetrics;
+exports.getBarcodeRenderMode = getBarcodeRenderMode;
 exports.getBarcodeValue = getBarcodeValue;
 exports.getElementBounds = getElementBounds;
 exports.getElementLabel = getElementLabel;

@@ -10,6 +10,8 @@ declare const DEFAULT_TEMPLATE_FONT_FAMILY = "\"Noto Sans CJK TC\", \"Noto Sans 
 declare const placeholderDefinitionsBySchema: Record<TemplateContextSchema, readonly PlaceholderDefinition[]>;
 type TextAnchor = "start" | "middle" | "end";
 type VerticalAlign = "top" | "middle" | "bottom";
+type HorizontalAlign = "left" | "center" | "right";
+type BarcodeRenderMode = "stretch" | "intrinsic";
 type SceneElementType = "text" | "rect" | "line" | "barcode";
 type SceneElementBase = {
   id: string;
@@ -58,6 +60,8 @@ type SceneBarcodeElement = SceneElementBase & {
   binding: string;
   stroke: string;
   showValue: boolean;
+  horizontalAlign?: HorizontalAlign;
+  renderMode?: BarcodeRenderMode;
 };
 type SceneElement = SceneTextElement | SceneRectElement | SceneLineElement | SceneBarcodeElement;
 type TemplateScene = {
@@ -154,6 +158,7 @@ interface SceneRenderHooks {
   renderBarcode?: (args: BarcodeRenderArgs) => Promise<string> | string;
 }
 declare const BARCODE_VALUE_HEIGHT = 14;
+declare const DEFAULT_BARCODE_MODULE_WIDTH = 2;
 declare const escapeXml: (value: string) => string;
 declare const resolveBindingValue: (binding: string, data: TemplateContextData) => string;
 declare const getElementLabel: (element: SceneElement, data: TemplateContextData) => string;
@@ -178,7 +183,27 @@ declare const createBarcodeBars: (value: string, width: number) => {
   x: number;
   width: number;
 }[];
+declare const createIntrinsicBarcodeBars: (value: string, moduleWidth?: number) => {
+  bars: {
+    x: number;
+    width: number;
+  }[];
+  width: number;
+};
 declare const getBarcodeGraphicHeight: (element: SceneBarcodeElement) => number;
+declare const getBarcodeHorizontalAlign: (element: Pick<SceneBarcodeElement, "horizontalAlign">) => HorizontalAlign;
+declare const getBarcodeRenderMode: (element: Pick<SceneBarcodeElement, "renderMode">) => BarcodeRenderMode;
+declare const getBarcodeHorizontalOffset: (containerWidth: number, contentWidth: number, horizontalAlign: HorizontalAlign) => number;
+declare const getBarcodeLayoutMetrics: (element: SceneBarcodeElement, value: string) => {
+  bars: {
+    x: number;
+    width: number;
+  }[];
+  captionX: number;
+  contentWidth: number;
+  contentX: number;
+  graphicHeight: number;
+};
 declare const getBarcodeValue: (element: SceneBarcodeElement, data: TemplateContextData) => string;
 declare const sceneToSvgMarkup: (scene: TemplateScene, data: TemplateContextData, hooks?: SceneRenderHooks) => Promise<string>;
 //#endregion
@@ -188,4 +213,4 @@ declare const sampleItemLabelData: ItemLabelTemplateData;
 declare const sampleDataBySchema: TemplateContextDataMap;
 declare const getSampleDataForSchema: <Schema extends TemplateContextSchema>(schema: Schema) => TemplateContextDataMap[Schema];
 //#endregion
-export { BARCODE_VALUE_HEIGHT, BarcodeRenderArgs, DEFAULT_SHIPPING_SLIP_DOCUMENT_ID, DEFAULT_TEMPLATE_FONT_FAMILY, ITEM_LABEL_BASIC_DOCUMENT_ID, ItemLabelTemplateData, MeasureTextArgs, PlaceholderDefinition, SHIPPING_SLIP_BIG_DOCUMENT_ID, SHIPPING_SLIP_DOCUMENT_IDS, SHIPPING_SLIP_SMALL_DOCUMENT_ID, SceneBarcodeElement, SceneElement, SceneElementType, SceneLineElement, SceneRectElement, SceneRenderHooks, SceneTextElement, ShippingSlipTemplateData, ShippingSlipTemplateDocumentId, TEMPLATE_DOCUMENTS, TEMPLATE_SCENE_SOURCE_PATHS, TemplateContextData, TemplateContextDataMap, TemplateContextSchema, TemplateDocument, TemplateDocumentId, TemplateFamily, TemplateScene, TextAnchor, VerticalAlign, cloneTemplateScene, createBarcodeBars, escapeXml, getBarcodeGraphicHeight, getBarcodeValue, getElementBounds, getElementLabel, getPlaceholderDefinitionsForSchema, getSampleDataForSchema, getTemplateDocument, getTemplateSceneSourcePath, getTextAnchorX, getTextBlockHeight, getTextLayout, getTextLines, getTextStartY, getTextValue, itemLabelBasicDocument, placeholderDefinitionsBySchema, resolveBindingValue, sampleDataBySchema, sampleItemLabelData, sampleShippingSlipData, sceneToSvgMarkup, shippingSlipBigDocument, shippingSlipSmallDocument, wrapTextToWidth };
+export { BARCODE_VALUE_HEIGHT, BarcodeRenderArgs, BarcodeRenderMode, DEFAULT_BARCODE_MODULE_WIDTH, DEFAULT_SHIPPING_SLIP_DOCUMENT_ID, DEFAULT_TEMPLATE_FONT_FAMILY, HorizontalAlign, ITEM_LABEL_BASIC_DOCUMENT_ID, ItemLabelTemplateData, MeasureTextArgs, PlaceholderDefinition, SHIPPING_SLIP_BIG_DOCUMENT_ID, SHIPPING_SLIP_DOCUMENT_IDS, SHIPPING_SLIP_SMALL_DOCUMENT_ID, SceneBarcodeElement, SceneElement, SceneElementType, SceneLineElement, SceneRectElement, SceneRenderHooks, SceneTextElement, ShippingSlipTemplateData, ShippingSlipTemplateDocumentId, TEMPLATE_DOCUMENTS, TEMPLATE_SCENE_SOURCE_PATHS, TemplateContextData, TemplateContextDataMap, TemplateContextSchema, TemplateDocument, TemplateDocumentId, TemplateFamily, TemplateScene, TextAnchor, VerticalAlign, cloneTemplateScene, createBarcodeBars, createIntrinsicBarcodeBars, escapeXml, getBarcodeGraphicHeight, getBarcodeHorizontalAlign, getBarcodeHorizontalOffset, getBarcodeLayoutMetrics, getBarcodeRenderMode, getBarcodeValue, getElementBounds, getElementLabel, getPlaceholderDefinitionsForSchema, getSampleDataForSchema, getTemplateDocument, getTemplateSceneSourcePath, getTextAnchorX, getTextBlockHeight, getTextLayout, getTextLines, getTextStartY, getTextValue, itemLabelBasicDocument, placeholderDefinitionsBySchema, resolveBindingValue, sampleDataBySchema, sampleItemLabelData, sampleShippingSlipData, sceneToSvgMarkup, shippingSlipBigDocument, shippingSlipSmallDocument, wrapTextToWidth };

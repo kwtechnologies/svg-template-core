@@ -26,14 +26,16 @@
       "id": "barcode",
       "name": "Barcode",
       "type": "barcode",
-      "x": 398,
+      "x": 350,
       "y": 22,
-      "width": 402,
+      "width": 420,
       "height": 104,
       "value": "",
       "binding": "item.sku",
       "stroke": "#111111",
-      "showValue": false
+      "showValue": false,
+      "horizontalAlign": "right",
+      "renderMode": "intrinsic"
     },
     {
       "id": "item-name-label",

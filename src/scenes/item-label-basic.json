@@ -33,7 +33,9 @@
       "value": "",
       "binding": "item.sku",
       "stroke": "#111111",
-      "showValue": false
+      "showValue": false,
+      "horizontalAlign": "right",
+      "renderMode": "intrinsic"
     },
     {
       "id": "item-name-label",

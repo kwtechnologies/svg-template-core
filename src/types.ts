@@ -53,6 +53,8 @@ export const placeholderDefinitionsBySchema: Record<
 
 export type TextAnchor = "start" | "middle" | "end";
 export type VerticalAlign = "top" | "middle" | "bottom";
+export type HorizontalAlign = "left" | "center" | "right";
+export type BarcodeRenderMode = "stretch" | "intrinsic";
 
 export type SceneElementType = "text" | "rect" | "line" | "barcode";
 
@@ -107,6 +109,8 @@ export type SceneBarcodeElement = SceneElementBase & {
   binding: string;
   stroke: string;
   showValue: boolean;
+  horizontalAlign?: HorizontalAlign;
+  renderMode?: BarcodeRenderMode;
 };
 
 export type SceneElement =
