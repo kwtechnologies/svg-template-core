@@ -48,7 +48,7 @@
       "y": 78,
       "width": 334,
       "height": 50,
-      "value": "OUT-240409-018",
+      "value": "",
       "binding": "order.orderNumber",
       "stroke": "#000000",
       "showValue": false
@@ -159,7 +159,7 @@
       "y": 178,
       "width": 464,
       "height": 32,
-      "text": "SF Express // Sender Pay",
+      "text": "",
       "binding": "computed.courierPayment",
       "fill": "#ffffff",
       "fontSize": 26,
