@@ -480,6 +480,45 @@ var shipping_slip_big_default = {
 			"height": 252,
 			"stroke": "#000000",
 			"strokeWidth": 1
+		},
+		{
+			"id": "tracking-label",
+			"name": "Tracking Label",
+			"type": "text",
+			"x": 532,
+			"y": 176,
+			"width": 110,
+			"height": 26,
+			"text": "Tracking:",
+			"binding": "",
+			"fill": "#000000",
+			"fontSize": 18,
+			"fontWeight": 700,
+			"fontFamily": "\"Noto Sans CJK TC\", \"Noto Sans TC\", sans-serif",
+			"lineHeight": 1,
+			"anchor": "start",
+			"verticalAlign": "top",
+			"hideWhenBlank": true,
+			"visibilityBinding": "order.trackingNumber"
+		},
+		{
+			"id": "tracking-value",
+			"name": "Tracking Value",
+			"type": "text",
+			"x": 642,
+			"y": 176,
+			"width": 160,
+			"height": 26,
+			"text": "",
+			"binding": "order.trackingNumber",
+			"fill": "#000000",
+			"fontSize": 18,
+			"fontWeight": 400,
+			"fontFamily": "\"Noto Sans CJK TC\", \"Noto Sans TC\", sans-serif",
+			"lineHeight": 1,
+			"anchor": "start",
+			"verticalAlign": "top",
+			"hideWhenBlank": true
 		}
 	]
 };
@@ -799,6 +838,45 @@ var shipping_slip_small_default = {
 			"lineHeight": 1.18,
 			"anchor": "start",
 			"verticalAlign": "top"
+		},
+		{
+			"id": "tracking-label",
+			"name": "Tracking Label",
+			"type": "text",
+			"x": 32,
+			"y": 644,
+			"width": 120,
+			"height": 24,
+			"text": "Tracking:",
+			"binding": "",
+			"fill": "#000000",
+			"fontSize": 18,
+			"fontWeight": 700,
+			"fontFamily": "\"Noto Sans CJK TC\", \"Noto Sans TC\", sans-serif",
+			"lineHeight": 1,
+			"anchor": "start",
+			"verticalAlign": "top",
+			"hideWhenBlank": true,
+			"visibilityBinding": "order.trackingNumber"
+		},
+		{
+			"id": "tracking-value",
+			"name": "Tracking Value",
+			"type": "text",
+			"x": 152,
+			"y": 644,
+			"width": 428,
+			"height": 24,
+			"text": "",
+			"binding": "order.trackingNumber",
+			"fill": "#000000",
+			"fontSize": 18,
+			"fontWeight": 400,
+			"fontFamily": "\"Noto Sans CJK TC\", \"Noto Sans TC\", sans-serif",
+			"lineHeight": 1,
+			"anchor": "start",
+			"verticalAlign": "top",
+			"hideWhenBlank": true
 		}
 	]
 };
@@ -867,6 +945,10 @@ const placeholderDefinitionsBySchema = {
 		{
 			id: "order.kubeRemarks",
 			label: "Kube Remarks"
+		},
+		{
+			id: "order.trackingNumber",
+			label: "Tracking Number"
 		},
 		{
 			id: "shipTo.recipientName",
@@ -1174,6 +1256,19 @@ const getBarcodeLayoutMetrics = (element, value) => {
 	};
 };
 const getBarcodeValue = (element, data) => element.binding ? resolveBindingValue(element.binding, data) : element.value;
+const isBlankTemplateValue = (value) => !value || value.trim().length === 0;
+/**
+* The raw value `hideWhenBlank` is judged on. Bound elements use what the
+* binding resolves to — not `getTextValue`, which falls back to the design-time
+* placeholder text and would keep an empty field on the page.
+*/
+const getElementVisibilityValue = (element, data) => {
+	if (element.visibilityBinding) return resolveBindingValue(element.visibilityBinding, data);
+	if (element.type === "text") return element.binding ? resolveBindingValue(element.binding, data) : element.text;
+	if (element.type === "barcode") return element.binding ? resolveBindingValue(element.binding, data) : element.value;
+	return "";
+};
+const isSceneElementVisible = (element, data) => !element.hideWhenBlank || !isBlankTemplateValue(getElementVisibilityValue(element, data));
 const renderTextElement = async (element, data, hooks) => {
 	const { lines, anchorX, startY } = getTextLayout(element, data, hooks);
 	const tspans = lines.map((line, index) => {
@@ -1203,7 +1298,7 @@ const renderElement = async (element, data, hooks) => {
 	return renderTextElement(element, data, hooks);
 };
 const sceneToSvgMarkup = async (scene, data, hooks = {}) => {
-	const content = await Promise.all(scene.elements.map((element) => renderElement(element, data, hooks)));
+	const content = await Promise.all(scene.elements.filter((element) => isSceneElementVisible(element, data)).map((element) => renderElement(element, data, hooks)));
 	return `<svg xmlns="http://www.w3.org/2000/svg" width="${scene.width}" height="${scene.height}" viewBox="0 0 ${scene.width} ${scene.height}" fill="none"><rect width="100%" height="100%" fill="${scene.background}" />${content.join("")}</svg>`;
 };
 //#endregion
@@ -1214,7 +1309,8 @@ const sampleShippingSlipData = {
 		courier: "SF Express",
 		courierFeePaymentMethod: "Sender Pay",
 		remarks: "Leave by concierge if no answer at the door.",
-		kubeRemarks: "Fragile bottles. Keep upright."
+		kubeRemarks: "Fragile bottles. Keep upright.",
+		trackingNumber: "SF1234567890"
 	},
 	shipTo: {
 		recipientName: "Chan Ka Yan",
@@ -1276,6 +1372,7 @@ exports.getBarcodeRenderMode = getBarcodeRenderMode;
 exports.getBarcodeValue = getBarcodeValue;
 exports.getElementBounds = getElementBounds;
 exports.getElementLabel = getElementLabel;
+exports.getElementVisibilityValue = getElementVisibilityValue;
 exports.getPlaceholderDefinitionsForSchema = getPlaceholderDefinitionsForSchema;
 exports.getSampleDataForSchema = getSampleDataForSchema;
 exports.getTemplateDocument = getTemplateDocument;
@@ -1286,6 +1383,8 @@ exports.getTextLayout = getTextLayout;
 exports.getTextLines = getTextLines;
 exports.getTextStartY = getTextStartY;
 exports.getTextValue = getTextValue;
+exports.isBlankTemplateValue = isBlankTemplateValue;
+exports.isSceneElementVisible = isSceneElementVisible;
 exports.itemLabelBasicDocument = itemLabelBasicDocument;
 exports.placeholderDefinitionsBySchema = placeholderDefinitionsBySchema;
 exports.resolveBindingValue = resolveBindingValue;

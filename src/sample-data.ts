@@ -12,6 +12,7 @@ export const sampleShippingSlipData: ShippingSlipTemplateData = {
     courierFeePaymentMethod: "Sender Pay",
     remarks: "Leave by concierge if no answer at the door.",
     kubeRemarks: "Fragile bottles. Keep upright.",
+    trackingNumber: "SF1234567890",
   },
   shipTo: {
     recipientName: "Chan Ka Yan",

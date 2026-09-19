@@ -6,12 +6,17 @@ import {
   getBarcodeLayoutMetrics,
   getPlaceholderDefinitionsForSchema,
   getSampleDataForSchema,
+  isSceneElementVisible,
   itemLabelBasicDocument,
   resolveBindingValue,
   sceneToSvgMarkup,
   shippingSlipBigDocument,
   shippingSlipSmallDocument,
   type SceneBarcodeElement,
+  type ShippingSlipTemplateData,
+  SHIPPING_SLIP_DOCUMENT_IDS,
+  getTemplateDocument,
+  type ShippingSlipTemplateDocumentId,
   wrapTextToWidth,
 } from "./index";
 
@@ -183,5 +188,84 @@ describe("svg-template-core", () => {
       horizontalAlign: "right",
       renderMode: "intrinsic",
     });
+  });
+});
+
+describe("optional tracking number on the shipping slips", () => {
+  const withTracking = (
+    trackingNumber: string | undefined,
+  ): ShippingSlipTemplateData => {
+    const base = getSampleDataForSchema("shipping-slip-v1");
+    return { ...base, order: { ...base.order, trackingNumber } };
+  };
+
+  const shippingSlipDocumentIds =
+    SHIPPING_SLIP_DOCUMENT_IDS as readonly ShippingSlipTemplateDocumentId[];
+
+  it.each(shippingSlipDocumentIds)(
+    "%s prints the tracking number when one is present",
+    async (documentId) => {
+      const markup = await sceneToSvgMarkup(
+        getTemplateDocument(documentId).scene,
+        withTracking("SF9988776655"),
+      );
+
+      expect(markup).toContain("SF9988776655");
+      expect(markup).toContain("Tracking:");
+    },
+  );
+
+  it.each(shippingSlipDocumentIds)(
+    "%s omits the label, the value and any placeholder box when tracking is missing",
+    async (documentId) => {
+      const scene = getTemplateDocument(documentId).scene;
+      const trackingElements = scene.elements.filter((element) =>
+        element.id.startsWith("tracking-"),
+      );
+      expect(trackingElements).toHaveLength(2);
+
+      for (const trackingNumber of [undefined, "", "   "]) {
+        const markup = await sceneToSvgMarkup(
+          scene,
+          withTracking(trackingNumber),
+        );
+
+        expect(markup).not.toContain("Tracking:");
+        // The transparent hit-box each text element draws must go too, or the
+        // slip keeps an empty placeholder where the number would have been.
+        for (const element of trackingElements) {
+          expect(markup).not.toContain(`x="${element.x}" y="${element.y}"`);
+        }
+      }
+    },
+  );
+
+  it("treats blank strings as missing and keeps unrelated elements visible", () => {
+    const scene = getTemplateDocument("shipping-slip-big").scene;
+    const trackingValue = scene.elements.find(
+      (element) => element.id === "tracking-value",
+    )!;
+    const orderNumber = scene.elements.find(
+      (element) => element.id === "title-order-number",
+    )!;
+
+    expect(isSceneElementVisible(trackingValue, withTracking("T1"))).toBe(true);
+    expect(isSceneElementVisible(trackingValue, withTracking(" \t "))).toBe(
+      false,
+    );
+    expect(isSceneElementVisible(trackingValue, withTracking(undefined))).toBe(
+      false,
+    );
+    expect(isSceneElementVisible(orderNumber, withTracking(undefined))).toBe(
+      true,
+    );
+  });
+
+  it("exposes the tracking number as a bindable placeholder", () => {
+    expect(
+      getPlaceholderDefinitionsForSchema("shipping-slip-v1").map(
+        (placeholder) => placeholder.id,
+      ),
+    ).toContain("order.trackingNumber");
   });
 });
