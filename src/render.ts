@@ -476,6 +476,44 @@ export const getBarcodeValue = (
   data: TemplateContextData,
 ) => (element.binding ? resolveBindingValue(element.binding, data) : element.value);
 
+export const isBlankTemplateValue = (value: string | null | undefined) =>
+  !value || value.trim().length === 0;
+
+/**
+ * The raw value `hideWhenBlank` is judged on. Bound elements use what the
+ * binding resolves to — not `getTextValue`, which falls back to the design-time
+ * placeholder text and would keep an empty field on the page.
+ */
+export const getElementVisibilityValue = (
+  element: SceneElement,
+  data: TemplateContextData,
+): string => {
+  if (element.visibilityBinding) {
+    return resolveBindingValue(element.visibilityBinding, data);
+  }
+
+  if (element.type === "text") {
+    return element.binding
+      ? resolveBindingValue(element.binding, data)
+      : element.text;
+  }
+
+  if (element.type === "barcode") {
+    return element.binding
+      ? resolveBindingValue(element.binding, data)
+      : element.value;
+  }
+
+  return "";
+};
+
+export const isSceneElementVisible = (
+  element: SceneElement,
+  data: TemplateContextData,
+) =>
+  !element.hideWhenBlank ||
+  !isBlankTemplateValue(getElementVisibilityValue(element, data));
+
 const renderTextElement = async (
   element: SceneTextElement,
   data: TemplateContextData,
@@ -538,7 +576,9 @@ export const sceneToSvgMarkup = async (
   hooks: SceneRenderHooks = {},
 ) => {
   const content = await Promise.all(
-    scene.elements.map((element) => renderElement(element, data, hooks)),
+    scene.elements
+      .filter((element) => isSceneElementVisible(element, data))
+      .map((element) => renderElement(element, data, hooks)),
   );
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${scene.width}" height="${scene.height}" viewBox="0 0 ${scene.width} ${scene.height}" fill="none"><rect width="100%" height="100%" fill="${scene.background}" />${content.join(
     "",

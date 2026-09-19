@@ -25,6 +25,7 @@ export const placeholderDefinitionsBySchema: Record<
     { id: "order.courierFeePaymentMethod", label: "Courier Payment" },
     { id: "order.remarks", label: "Order Remarks" },
     { id: "order.kubeRemarks", label: "Kube Remarks" },
+    { id: "order.trackingNumber", label: "Tracking Number" },
     { id: "shipTo.recipientName", label: "Recipient Name" },
     { id: "shipTo.recipientContactPhone", label: "Recipient Phone" },
     { id: "shipTo.shipToAddress", label: "Street Address" },
@@ -65,6 +66,17 @@ type SceneElementBase = {
   x: number;
   y: number;
   locked?: boolean;
+  /**
+   * Drop the element from the rendered output when the value it is keyed on is
+   * blank. Used for optional fields such as the tracking number, where the
+   * label and the value must both disappear rather than print an empty box.
+   */
+  hideWhenBlank?: boolean;
+  /**
+   * Binding consulted for `hideWhenBlank`. Defaults to the element's own
+   * binding, so a static label can follow the value it belongs to.
+   */
+  visibilityBinding?: string;
 };
 
 export type SceneTextElement = SceneElementBase & {
@@ -134,6 +146,11 @@ export interface ShippingSlipTemplateData {
     courierFeePaymentMethod: string;
     remarks: string;
     kubeRemarks: string;
+    /**
+     * Optional: orders can be printed before a carrier assigns a tracking
+     * number. Blank means "omit from the slip", never "print an empty field".
+     */
+    trackingNumber?: string;
   };
   shipTo: {
     recipientName: string;

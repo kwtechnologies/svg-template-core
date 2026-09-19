@@ -312,6 +312,45 @@
       "lineHeight": 1.18,
       "anchor": "start",
       "verticalAlign": "top"
+    },
+    {
+      "id": "tracking-label",
+      "name": "Tracking Label",
+      "type": "text",
+      "x": 32,
+      "y": 644,
+      "width": 120,
+      "height": 24,
+      "text": "Tracking:",
+      "binding": "",
+      "fill": "#000000",
+      "fontSize": 18,
+      "fontWeight": 700,
+      "fontFamily": "\"Noto Sans CJK TC\", \"Noto Sans TC\", sans-serif",
+      "lineHeight": 1,
+      "anchor": "start",
+      "verticalAlign": "top",
+      "hideWhenBlank": true,
+      "visibilityBinding": "order.trackingNumber"
+    },
+    {
+      "id": "tracking-value",
+      "name": "Tracking Value",
+      "type": "text",
+      "x": 152,
+      "y": 644,
+      "width": 428,
+      "height": 24,
+      "text": "",
+      "binding": "order.trackingNumber",
+      "fill": "#000000",
+      "fontSize": 18,
+      "fontWeight": 400,
+      "fontFamily": "\"Noto Sans CJK TC\", \"Noto Sans TC\", sans-serif",
+      "lineHeight": 1,
+      "anchor": "start",
+      "verticalAlign": "top",
+      "hideWhenBlank": true
     }
   ]
 }

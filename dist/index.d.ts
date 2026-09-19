@@ -20,6 +20,17 @@ type SceneElementBase = {
   x: number;
   y: number;
   locked?: boolean;
+  /**
+   * Drop the element from the rendered output when the value it is keyed on is
+   * blank. Used for optional fields such as the tracking number, where the
+   * label and the value must both disappear rather than print an empty box.
+   */
+  hideWhenBlank?: boolean;
+  /**
+   * Binding consulted for `hideWhenBlank`. Defaults to the element's own
+   * binding, so a static label can follow the value it belongs to.
+   */
+  visibilityBinding?: string;
 };
 type SceneTextElement = SceneElementBase & {
   type: "text";
@@ -78,6 +89,11 @@ interface ShippingSlipTemplateData {
     courierFeePaymentMethod: string;
     remarks: string;
     kubeRemarks: string;
+    /**
+     * Optional: orders can be printed before a carrier assigns a tracking
+     * number. Blank means "omit from the slip", never "print an empty field".
+     */
+    trackingNumber?: string;
   };
   shipTo: {
     recipientName: string;
@@ -205,6 +221,14 @@ declare const getBarcodeLayoutMetrics: (element: SceneBarcodeElement, value: str
   graphicHeight: number;
 };
 declare const getBarcodeValue: (element: SceneBarcodeElement, data: TemplateContextData) => string;
+declare const isBlankTemplateValue: (value: string | null | undefined) => boolean;
+/**
+ * The raw value `hideWhenBlank` is judged on. Bound elements use what the
+ * binding resolves to — not `getTextValue`, which falls back to the design-time
+ * placeholder text and would keep an empty field on the page.
+ */
+declare const getElementVisibilityValue: (element: SceneElement, data: TemplateContextData) => string;
+declare const isSceneElementVisible: (element: SceneElement, data: TemplateContextData) => boolean;
 declare const sceneToSvgMarkup: (scene: TemplateScene, data: TemplateContextData, hooks?: SceneRenderHooks) => Promise<string>;
 //#endregion
 //#region src/sample-data.d.ts
@@ -213,4 +237,4 @@ declare const sampleItemLabelData: ItemLabelTemplateData;
 declare const sampleDataBySchema: TemplateContextDataMap;
 declare const getSampleDataForSchema: <Schema extends TemplateContextSchema>(schema: Schema) => TemplateContextDataMap[Schema];
 //#endregion
-export { BARCODE_VALUE_HEIGHT, BarcodeRenderArgs, BarcodeRenderMode, DEFAULT_BARCODE_MODULE_WIDTH, DEFAULT_SHIPPING_SLIP_DOCUMENT_ID, DEFAULT_TEMPLATE_FONT_FAMILY, HorizontalAlign, ITEM_LABEL_BASIC_DOCUMENT_ID, ItemLabelTemplateData, MeasureTextArgs, PlaceholderDefinition, SHIPPING_SLIP_BIG_DOCUMENT_ID, SHIPPING_SLIP_DOCUMENT_IDS, SHIPPING_SLIP_SMALL_DOCUMENT_ID, SceneBarcodeElement, SceneElement, SceneElementType, SceneLineElement, SceneRectElement, SceneRenderHooks, SceneTextElement, ShippingSlipTemplateData, ShippingSlipTemplateDocumentId, TEMPLATE_DOCUMENTS, TEMPLATE_SCENE_SOURCE_PATHS, TemplateContextData, TemplateContextDataMap, TemplateContextSchema, TemplateDocument, TemplateDocumentId, TemplateFamily, TemplateScene, TextAnchor, VerticalAlign, cloneTemplateScene, createBarcodeBars, createIntrinsicBarcodeBars, escapeXml, getBarcodeGraphicHeight, getBarcodeHorizontalAlign, getBarcodeHorizontalOffset, getBarcodeLayoutMetrics, getBarcodeRenderMode, getBarcodeValue, getElementBounds, getElementLabel, getPlaceholderDefinitionsForSchema, getSampleDataForSchema, getTemplateDocument, getTemplateSceneSourcePath, getTextAnchorX, getTextBlockHeight, getTextLayout, getTextLines, getTextStartY, getTextValue, itemLabelBasicDocument, placeholderDefinitionsBySchema, resolveBindingValue, sampleDataBySchema, sampleItemLabelData, sampleShippingSlipData, sceneToSvgMarkup, shippingSlipBigDocument, shippingSlipSmallDocument, wrapTextToWidth };
+export { BARCODE_VALUE_HEIGHT, BarcodeRenderArgs, BarcodeRenderMode, DEFAULT_BARCODE_MODULE_WIDTH, DEFAULT_SHIPPING_SLIP_DOCUMENT_ID, DEFAULT_TEMPLATE_FONT_FAMILY, HorizontalAlign, ITEM_LABEL_BASIC_DOCUMENT_ID, ItemLabelTemplateData, MeasureTextArgs, PlaceholderDefinition, SHIPPING_SLIP_BIG_DOCUMENT_ID, SHIPPING_SLIP_DOCUMENT_IDS, SHIPPING_SLIP_SMALL_DOCUMENT_ID, SceneBarcodeElement, SceneElement, SceneElementType, SceneLineElement, SceneRectElement, SceneRenderHooks, SceneTextElement, ShippingSlipTemplateData, ShippingSlipTemplateDocumentId, TEMPLATE_DOCUMENTS, TEMPLATE_SCENE_SOURCE_PATHS, TemplateContextData, TemplateContextDataMap, TemplateContextSchema, TemplateDocument, TemplateDocumentId, TemplateFamily, TemplateScene, TextAnchor, VerticalAlign, cloneTemplateScene, createBarcodeBars, createIntrinsicBarcodeBars, escapeXml, getBarcodeGraphicHeight, getBarcodeHorizontalAlign, getBarcodeHorizontalOffset, getBarcodeLayoutMetrics, getBarcodeRenderMode, getBarcodeValue, getElementBounds, getElementLabel, getElementVisibilityValue, getPlaceholderDefinitionsForSchema, getSampleDataForSchema, getTemplateDocument, getTemplateSceneSourcePath, getTextAnchorX, getTextBlockHeight, getTextLayout, getTextLines, getTextStartY, getTextValue, isBlankTemplateValue, isSceneElementVisible, itemLabelBasicDocument, placeholderDefinitionsBySchema, resolveBindingValue, sampleDataBySchema, sampleItemLabelData, sampleShippingSlipData, sceneToSvgMarkup, shippingSlipBigDocument, shippingSlipSmallDocument, wrapTextToWidth };
